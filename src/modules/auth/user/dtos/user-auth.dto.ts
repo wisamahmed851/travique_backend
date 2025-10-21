@@ -18,7 +18,7 @@ export class UserRegisterDto {
   @IsEmail()
   email: string;
 
-  @IsNotEmpty()
+  @IsOptional()
   phone: string;
 
   @IsOptional()
@@ -31,7 +31,7 @@ export class UserRegisterDto {
   @Match('password', { message: 'Passwords does not match' })
   confirm_password: string;
 
-  @IsNotEmpty()
+  @IsOptional()
   role: string;
 
   @IsOptional()

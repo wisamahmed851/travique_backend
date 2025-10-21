@@ -91,6 +91,9 @@ export class UserAuthService {
 
       // Fetch role by name
       let role;
+      if(body.role == null || body.role == undefined){
+        body.role = 'customer';
+      }
       if (body.role === 'customer' || body.role === 'provider') {
         role = await queryRunner.manager.findOne(Role, {
           where: { name: body.role },
