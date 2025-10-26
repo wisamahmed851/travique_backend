@@ -10,7 +10,7 @@ import { Repository, Not } from 'typeorm';
 import { User } from './entity/user.entity';
 import { CreateUserDto, UpdateUserDto } from './dtos/users.dto';
 import { UserDetailsDto } from './dtos/user_details.dto';
-import * as bcrypt from 'bcrypt';
+import * as bcrypt from 'bcryptjs';
 import { Exclude, instanceToPlain } from 'class-transformer';
 import { Role } from '../roles/entity/roles.entity';
 import { UserRole } from '../assig-roles-user/entity/user-role.entity';

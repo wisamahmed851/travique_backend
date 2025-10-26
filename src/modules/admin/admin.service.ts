@@ -10,7 +10,7 @@ import { Repository, Not } from 'typeorm';
 import { Admin } from './entity/admin.entity';
 import { CreateAdminDto } from './dtos/create-admin.dto';
 import { UpdateAdminDto } from './dtos/update-admin.dto';
-import * as bcrypt from 'bcrypt';
+import * as bcrypt from 'bcryptjs';
 import { Role } from '../roles/entity/roles.entity';
 
 @Injectable()

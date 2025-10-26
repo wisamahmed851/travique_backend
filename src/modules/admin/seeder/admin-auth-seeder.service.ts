@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import * as bcrypt from 'bcrypt';
+import * as bcrypt from 'bcryptjs';
 import { Admin } from '../entity/admin.entity';
 import { AdminRole } from 'src/modules/assig-roles-admin/entity/admin-role.entity';
 import { Role } from 'src/modules/roles/entity/roles.entity';
