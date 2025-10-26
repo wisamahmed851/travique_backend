@@ -5,7 +5,6 @@ import {
   HttpCode,
   Post,
   UploadedFile,
-  UploadedFiles,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
@@ -15,7 +14,7 @@ import { UserJwtAuthGuard } from './user-jwt.guard';
 import { CurrentUser } from 'src/common/decorators/current-user.decorator';
 import { User } from 'src/modules/users/entity/user.entity';
 import { UpdateProfileDto, UserRegisterDto } from './dtos/user-auth.dto';
-import { FileFieldsInterceptor, FileInterceptor } from '@nestjs/platform-express';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { multerConfig } from 'src/common/utils/multer.config';
 import { RolesGuard } from 'src/common/guards/roles.guard';
 import { Roles } from 'src/common/decorators/roles.decorator';
@@ -24,81 +23,91 @@ import { Roles } from 'src/common/decorators/roles.decorator';
 export class UserAuthController {
   constructor(private readonly userAuthService: UserAuthService) { }
 
+  @Post('register')
+  async register(@Body() body: UserRegisterDto) {
+    const { userWithRole, access_token } = await this.userAuthService.register(body);
+    const user = {
+      name: userWithRole.name,
+      image: userWithRole.image,
+    }
+    return {
+      success: true,
+      message: 'User registered successfully',
+      data: { user, access_token },
+    };
+  }
+
   @Post('login')
   @HttpCode(200)
   async login(@Body() body: UserLoginDto) {
-    const user = await this.userAuthService.validateUser(
-      body.email,
-      body.password,
-    );
-    return await this.userAuthService.login(user);
+    const user = await this.userAuthService.validateUser(body.email, body.password);
+    const { token, refresh_token, role } = await this.userAuthService.login(user);
+    return {
+      success: true,
+      message: 'User logged in successfully',
+      data: { access_token: token, refresh_token, role },
+    };
   }
 
   @Post('refresh-token')
   async refreshToken(@Body('refresh_token') refreshToken: string) {
-    // return (refreshToken);
-    if (!refreshToken) {
-      throw new Error('Refresh token is required');
-    }
-    return await this.userAuthService.refreshToken(refreshToken);
-
-  }
-
-  @Post('register')
-  async register(
-    @Body() body: UserRegisterDto,
-  ) {
-    return this.userAuthService.register(body);
+    const result = await this.userAuthService.refreshToken(refreshToken);
+    return {
+      success: true,
+      message: 'Token refreshed successfully',
+      data: result,
+    };
   }
 
   @Get('profile')
   @UseGuards(UserJwtAuthGuard)
   async profile(@CurrentUser() user: User) {
-    return await this.userAuthService.profile(user);
+    const profile = await this.userAuthService.profile(user);
+    return { success: true, message: 'Profile fetched successfully', data: profile };
   }
 
-  @Post('current-location')
-  @UseGuards(UserJwtAuthGuard)
-  async currentLocation(
-    @CurrentUser() user: User,
-    @Body() body: { langitude: number; latitude: number },
-  ) {
-    return await this.userAuthService.currentLocation(user.id, body);
-  }
-
-  @UseGuards(UserJwtAuthGuard)
   @Post('update-profile')
+  @UseGuards(UserJwtAuthGuard)
   @UseInterceptors(FileInterceptor('image', multerConfig('uploads')))
   async profileUpdate(
     @CurrentUser() user: User,
     @Body() body: UpdateProfileDto,
     @UploadedFile() file: Express.Multer.File,
   ) {
-    const uploaddata = file ? { ...body, image: file.filename } : body;
-    return await this.userAuthService.profileUpdate(user, uploaddata);
+    const updated = await this.userAuthService.profileUpdate(user, file ? { ...body, image: file.filename } : body);
+    return { success: true, message: 'Profile updated successfully', data: updated };
   }
 
   @Post('change-password')
-  @HttpCode(200)
   @UseGuards(UserJwtAuthGuard)
-  async changePassword(
-    @Body() body: { oldPassword: string; newPassword: string },
-    @CurrentUser() user: User,
-  ) {
-    return await this.userAuthService.changePassword(body, user);
+  async changePassword(@Body() body: { oldPassword: string; newPassword: string }, @CurrentUser() user: User) {
+    await this.userAuthService.changePassword(body, user);
+    return { success: true, message: 'Password updated successfully' };
+  }
+
+  @Post('current-location')
+  @UseGuards(UserJwtAuthGuard)
+  async currentLocation(@CurrentUser() user: User, @Body() body: { langitude: number; latitude: number }) {
+    const updated = await this.userAuthService.currentLocation(user.id, body);
+    return { success: true, message: 'Location updated successfully', data: updated };
   }
 
   @Get('mode')
   @UseGuards(UserJwtAuthGuard, RolesGuard)
   @Roles('driver')
   async changeMode(@CurrentUser() user: User) {
-    return this.userAuthService.modeChnage(user);
+    const updated = await this.userAuthService.modeChange(user);
+    return {
+      success: true,
+      message: `Driver is now ${updated.isOnline ? 'Online' : 'Offline'}`,
+      data: updated,
+    };
   }
 
   @Post('logout')
-  @HttpCode(200)
   @UseGuards(UserJwtAuthGuard)
   async logout(@CurrentUser() user: User) {
-    return await this.userAuthService.logout(user);
+    await this.userAuthService.logout(user);
+    return { success: true, message: 'User logged out successfully' };
   }
 }
