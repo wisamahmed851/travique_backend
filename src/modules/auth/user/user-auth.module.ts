@@ -8,6 +8,7 @@ import { UserJwtStrategy } from './user-jwt.strategy';
 import { Role } from 'src/modules/roles/entity/roles.entity';
 import { UserRole } from 'src/modules/assig-roles-user/entity/user-role.entity';
 import { City } from 'src/modules/city/entity/city.entity';
+import { MailModule } from 'src/common/mail/mail.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { City } from 'src/modules/city/entity/city.entity';
       secret: 'user-secret-key',
       signOptions: { expiresIn: '30m' },
     }),
+    MailModule
   ],
   controllers: [UserAuthController],
   providers: [UserAuthService, UserJwtStrategy],

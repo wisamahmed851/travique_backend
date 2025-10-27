@@ -1,3 +1,4 @@
+// user.entity.ts
 import {
   BeforeInsert,
   Column,
@@ -5,7 +6,6 @@ import {
   JoinColumn,
   ManyToOne,
   OneToMany,
-  OneToOne,
   PrimaryGeneratedColumn,
 } from 'typeorm';
 import { Exclude } from 'class-transformer';
@@ -37,36 +37,12 @@ export class User {
   gender: string;
 
   @Column({ nullable: true })
-  street: string;
-
-  @Column({ nullable: true })
-  district: string;
-
-  @Column({ nullable: true })
-  image: string;
-
- /*  @Column({
-    type: 'geography',
-    spatialFeatureType: 'Point',
-    nullable: true,
-    srid: 4326,
-    comment: 'User location in longitude and latitude',
-  })
-  location: string; */
-
-  @Column({nullable: true})
-  longitude: string;
-
-  @Column({nullable: true})
-  latitude: string;
-
-  @Column({ nullable: true })
   city_id: number;
 
   @ManyToOne(() => City, { onDelete: 'CASCADE', eager: true })
   @JoinColumn({ name: 'city_id' })
   city: City;
-  
+
   @Column({
     type: 'smallint',
     default: 1,
@@ -75,36 +51,24 @@ export class User {
   })
   status: number;
 
+  // ✅ account verification status
   @Column({
-    type: 'smallint',
-    default: 1,
-    nullable: false,
-    comment: '0 = not verified, 1 = verified',
+    type: 'boolean',
+    default: false,
+    comment: 'true = verified, false = not verified',
   })
-  isVarified: number;
+  is_verified: boolean;
 
-  @Column({
-    type: 'smallint',
-    default: 1,
-    nullable: false,
-    comment: '1 for online and 0 for offline',
-  })
-  isOnline: number;
+  // ✅ OTP for verification
+  @Column({ nullable: true })
+  otp: string;
 
-  @Column({ type: 'date' })
-  created_at: string;
+  // ✅ OTP expiration timestamp
+  @Column({ type: 'timestamp', nullable: true })
+  otp_expiration: Date;
 
-  @Column({ type: 'date' })
-  updated_at: string;
-  
-
-  @BeforeInsert()
-  setCreateDateParts() {
-    const today = new Date();
-    const onlyDate = today.toISOString().split('T')[0]; // 'YYYY-MM-DD'
-    this.created_at = onlyDate;
-    this.updated_at = onlyDate;
-  }
+  @Column({ nullable: true })
+  image: string;
 
   @Column({ nullable: true })
   access_token: string;
@@ -112,10 +76,20 @@ export class User {
   @Column({ nullable: true })
   refresh_token: string;
 
-  @Column({ nullable: true })
-  fcm_token: string;
+  @Column({ type: 'date' })
+  created_at: string;
+
+  @Column({ type: 'date' })
+  updated_at: string;
+
+  @BeforeInsert()
+  setCreateDateParts() {
+    const today = new Date();
+    const onlyDate = today.toISOString().split('T')[0];
+    this.created_at = onlyDate;
+    this.updated_at = onlyDate;
+  }
 
   @OneToMany(() => UserRole, (userRole) => userRole.role)
   userRoles: UserRole[];
-
 }

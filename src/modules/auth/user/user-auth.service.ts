@@ -16,6 +16,7 @@ import { UpdateProfileDto, UserRegisterDto } from './dtos/user-auth.dto';
 import { sanitizeUser } from 'src/common/utils/sanitize.util';
 import { City } from 'src/modules/city/entity/city.entity';
 import { ConfigService } from '@nestjs/config';
+import { MailService } from 'src/common/mail/mail.service';
 
 @Injectable()
 export class UserAuthService {
@@ -31,6 +32,7 @@ export class UserAuthService {
     private cityRepo: Repository<City>,
     private readonly dataSource: DataSource,
     private readonly configService: ConfigService,
+    private readonly mailSerivce: MailService,
   ) { }
 
   private handleUnknown(err: unknown): never {
@@ -51,7 +53,7 @@ export class UserAuthService {
     await queryRunner.startTransaction();
 
     try {
-      // 1️⃣ Check if user already exists
+      // Check if user already exists
       const existingUser = await queryRunner.manager.findOne(User, {
         where: { email: body.email },
       });
@@ -59,12 +61,12 @@ export class UserAuthService {
         throw new BadRequestException('User with this email already exists');
       }
 
-      // 2️⃣ Hash password
+      // Hash password
       if (body.password) {
         body.password = await bcrypt.hash(body.password, 10);
       }
 
-      // 3️⃣ Validate city (if provided)
+      // Validate city (optional)
       if (body.city_id) {
         const city = await queryRunner.manager.findOne(City, {
           where: { id: body.city_id },
@@ -72,7 +74,11 @@ export class UserAuthService {
         if (!city) throw new NotFoundException('City not found');
       }
 
-      // 4️⃣ Create user
+      // Generate OTP
+      const otp = Math.floor(100000 + Math.random() * 900000).toString();
+      const otpExpiration = new Date(Date.now() + 5 * 60 * 1000); // 5 min
+
+      // Create user
       const user = queryRunner.manager.getRepository(User).create({
         name: body.name,
         email: body.email,
@@ -80,17 +86,16 @@ export class UserAuthService {
         phone: body.phone,
         gender: body.gender,
         city_id: body.city_id,
+        is_verified: false,
+        otp,
+        otp_expiration: otpExpiration,
       });
+
       const savedUser = await queryRunner.manager.save(User, user);
 
-      // 5️⃣ Assign default role if not provided
+      // Assign role
       if (!body.role) body.role = 'user';
-
-      let role = await queryRunner.manager.findOne(Role, {
-        where: { name: body.role },
-        select: { id: true, name: true },
-      });
-
+      const role = await queryRunner.manager.findOne(Role, { where: { name: body.role } });
       if (!role) throw new BadRequestException('Role Not Found');
 
       const userRole = queryRunner.manager.getRepository(UserRole).create({
@@ -101,176 +106,186 @@ export class UserAuthService {
 
       await queryRunner.commitTransaction();
 
-      // 6️⃣ Fetch user with role for response
-      const userWithRole = await this.userRepository.findOne({
-        where: { id: savedUser.id },
-        relations: ['userRoles', 'userRoles.role'],
+      // Send OTP email
+      await this.mailSerivce.sendVerificationEmail(savedUser.email, otp);
+
+      return { message: 'OTP sent to your email. Please verify to activate your account.' };
+    } catch (err) {
+      if (queryRunner.isTransactionActive) await queryRunner.rollbackTransaction();
+      this.handleUnknown(err);
+    } finally {
+      await queryRunner.release();
+    }
+  }
+  async verifyOtp(email: string, otp: string) {
+    try {
+      const user = await this.userRepository.findOne({ where: { email } });
+      if (!user) throw new NotFoundException('User not found');
+      if (user.is_verified) return { message: 'User already verified' };
+
+      // Check if OTP is correct and not expired
+      const now = new Date();
+      if (user.otp !== otp) throw new BadRequestException('Invalid OTP');
+      if (now > user.otp_expiration) throw new BadRequestException('OTP expired');
+
+      // Mark user verified
+      user.is_verified = true;
+      user.otp = '';
+
+      await this.userRepository.save(user);
+
+      // Generate login token now that user is verified
+      const roles = await this.userRoleRepo.find({
+        where: { user_id: user.id },
+        relations: ['role'],
       });
-      if (!userWithRole) {
-        throw new NotFoundException("awl");
-      }
-      // 7️⃣ Automatically generate JWT token
-      const payload = { id: userWithRole.id, email: userWithRole.email, role: role.name };
-      const token = await this.jwtService.signAsync(payload);
+      const roleNames = roles.map((r) => r.role.name);
+      const payload = { sub: user.id, email: user.email, roles: roleNames };
 
-      // ✅ Return both user info + token
-      return { userWithRole, access_token: token, };
+      const token = this.jwtService.sign(payload, { expiresIn: '30m' });
+      const refresh_token = this.jwtService.sign(payload, { expiresIn: '7d' });
 
-  } catch(err) {
-    if (queryRunner.isTransactionActive) await queryRunner.rollbackTransaction();
-    this.handleUnknown(err);
-  } finally {
-    await queryRunner.release();
+      user.access_token = token;
+      user.refresh_token = refresh_token;
+      await this.userRepository.save(user);
+
+      return { message: 'Account verified successfully', token, refresh_token, user };
+    } catch (err) {
+      this.handleUnknown(err);
+    }
   }
-  }
+
 
 
   async validateUser(email: string, password: string) {
-  try {
-    const user = await this.userRepository.findOne({
-      where: { email: email.toLowerCase().trim() },
-    });
-    if (!user) throw new BadRequestException('Invalid credentials');
+    try {
+      const user = await this.userRepository.findOne({
+        where: { email: email.toLowerCase().trim() },
+      });
+      if (!user) throw new BadRequestException('Invalid credentials');
 
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) throw new BadRequestException('Invalid password');
+      const isMatch = await bcrypt.compare(password, user.password);
+      if (!isMatch) throw new BadRequestException('Invalid password');
 
-    return user;
-  } catch (err) {
-    this.handleUnknown(err);
+      return user;
+    } catch (err) {
+      this.handleUnknown(err);
+    }
   }
-}
 
   async login(user: User) {
-  try {
-    const roles = await this.userRoleRepo.find({
-      where: { user_id: user.id },
-      relations: ['role'],
-    });
-    const roleNames = roles.map((r) => r.role.name);
-    const payload = { sub: user.id, email: user.email, roles: roleNames };
+    try {
+      if (!user.is_verified) {
+        // Generate and resend OTP
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        user.otp = otp;
+        user.otp_expiration = new Date(Date.now() + 5 * 60 * 1000);
+        await this.userRepository.save(user);
+        await this.mailSerivce.sendVerificationEmail(user.email, otp);
 
-    const token = this.jwtService.sign(payload, { expiresIn: '30m' });
-    const refresh_token = this.jwtService.sign(payload, { expiresIn: '7d' });
+        return { message: 'Account not verified. New OTP sent to your email.' };
+      }
 
-    user.access_token = token;
-    user.refresh_token = refresh_token;
-    await this.userRepository.save(user);
+      // Fetch roles
+      const roles = await this.userRoleRepo.find({
+        where: { user_id: user.id },
+        relations: ['role'],
+      });
+      const roleNames = roles.map((r) => r.role.name);
+      const payload = { sub: user.id, email: user.email, roles: roleNames };
 
-    const role = roles[0]?.role;
-    return { user, token, refresh_token, role };
-  } catch (err) {
-    this.handleUnknown(err);
+      const token = this.jwtService.sign(payload, { expiresIn: '30m' });
+      const refresh_token = this.jwtService.sign(payload, { expiresIn: '7d' });
+
+      user.access_token = token;
+      user.refresh_token = refresh_token;
+      await this.userRepository.save(user);
+      if(user.access_token){
+        let message = "User Logged in Successfull";
+      }
+
+      const role = roles[0]?.role;
+      return { user, token, refresh_token, role };
+    } catch (err) {
+      this.handleUnknown(err);
+    }
   }
-}
 
-  async currentLocation(userId: number, body: { langitude: number; latitude: number }) {
-  try {
-    const result = await this.userRepository
-      .createQueryBuilder()
-      .update(User)
-      .set({
-        longitude: () => `${body.langitude}`,
-        latitude: () => `${body.latitude}`,
-      })
-      .where('id = :id', { id: userId })
-      .returning(['id', 'name', 'email', 'phone', 'address', 'longitude', 'latitude'])
-      .execute();
-
-    if (!result.affected) throw new NotFoundException('User not found');
-    return result.raw[0];
-  } catch (err) {
-    this.handleUnknown(err);
-  }
-}
 
   async refreshToken(refreshToken: string) {
-  const user = await this.userRepository.findOne({ where: { refresh_token: refreshToken } });
-  if (!user) throw new UnauthorizedException('Invalid refresh token');
+    const user = await this.userRepository.findOne({ where: { refresh_token: refreshToken } });
+    if (!user) throw new UnauthorizedException('Invalid refresh token');
 
-  try {
-    const roles = await this.userRoleRepo.find({ where: { user_id: user.id }, relations: ['role'] });
-    const roleNames = roles.map((r) => r.role.name);
-    const payload = this.jwtService.verify(refreshToken, { secret: 'user-secret-key' });
+    try {
+      const roles = await this.userRoleRepo.find({ where: { user_id: user.id }, relations: ['role'] });
+      const roleNames = roles.map((r) => r.role.name);
+      const payload = this.jwtService.verify(refreshToken, { secret: 'user-secret-key' });
 
-    const newAccessToken = this.jwtService.sign(
-      { sub: user.id, email: user.email, roles: roleNames },
-      { expiresIn: '30m' },
-    );
+      const newAccessToken = this.jwtService.sign(
+        { sub: user.id, email: user.email, roles: roleNames },
+        { expiresIn: '30m' },
+      );
 
-    user.access_token = newAccessToken;
-    await this.userRepository.save(user);
+      user.access_token = newAccessToken;
+      await this.userRepository.save(user);
 
-    return { access_token: newAccessToken, user: sanitizeUser(user) };
-  } catch (err) {
-    this.handleUnknown(err);
+      return { access_token: newAccessToken, user: sanitizeUser(user) };
+    } catch (err) {
+      this.handleUnknown(err);
+    }
   }
-}
 
   async profile(user: User) {
-  try {
-    const found = await this.userRepository.findOne({
-      where: { id: user.id },
-      select: ['id', 'name', 'email', 'phone', 'address', 'gender', 'street', 'district', 'image', 'status', 'created_at', 'updated_at'],
-    });
-    if (!found) throw new NotFoundException('User not found');
-    return found;
-  } catch (err) {
-    this.handleUnknown(err);
+    try {
+      const found = await this.userRepository.findOne({
+        where: { id: user.id },
+        select: ['id', 'name', 'email', 'phone', 'address', 'gender', 'image', 'status', 'created_at', 'updated_at'],
+      });
+      if (!found) throw new NotFoundException('User not found');
+      return found;
+    } catch (err) {
+      this.handleUnknown(err);
+    }
   }
-}
 
   async profileUpdate(user: User, body: UpdateProfileDto) {
-  try {
-    const exist = await this.userRepository.findOne({ where: { id: user.id } });
-    if (!exist) throw new NotFoundException('User Not Found');
+    try {
+      const exist = await this.userRepository.findOne({ where: { id: user.id } });
+      if (!exist) throw new NotFoundException('User Not Found');
 
-    Object.assign(exist, body);
-    return await this.userRepository.save(exist);
-  } catch (err) {
-    this.handleUnknown(err);
+      Object.assign(exist, body);
+      return await this.userRepository.save(exist);
+    } catch (err) {
+      this.handleUnknown(err);
+    }
   }
-}
 
   async changePassword(body: { oldPassword: string; newPassword: string }, user: User) {
-  try {
-    const loginUser = await this.userRepository.findOne({ where: { id: user.id } });
-    if (!loginUser) throw new NotFoundException('User not found');
+    try {
+      const loginUser = await this.userRepository.findOne({ where: { id: user.id } });
+      if (!loginUser) throw new NotFoundException('User not found');
 
-    const matched = await bcrypt.compare(body.oldPassword, loginUser.password);
-    if (!matched) throw new BadRequestException('Old password is incorrect');
+      const matched = await bcrypt.compare(body.oldPassword, loginUser.password);
+      if (!matched) throw new BadRequestException('Old password is incorrect');
 
-    loginUser.password = await bcrypt.hash(body.newPassword.trim(), 10);
-    await this.userRepository.save(loginUser);
-    return true;
-  } catch (err) {
-    this.handleUnknown(err);
+      loginUser.password = await bcrypt.hash(body.newPassword.trim(), 10);
+      await this.userRepository.save(loginUser);
+      return true;
+    } catch (err) {
+      this.handleUnknown(err);
+    }
   }
-}
-
-  async modeChange(user: User) {
-  try {
-    const currentUser = await this.userRepository.findOne({ where: { id: user.id } });
-    if (!currentUser) throw new NotFoundException('Driver not Found');
-
-    currentUser.isOnline = currentUser.isOnline === 1 ? 0 : 1;
-    const saved = await this.userRepository.save(currentUser);
-    return saved;
-  } catch (err) {
-    this.handleUnknown(err);
-  }
-}
 
   async logout(user: User) {
-  try {
-    const exist = await this.userRepository.findOne({ where: { id: user.id } });
-    if (!exist) throw new NotFoundException('User not found');
+    try {
+      const exist = await this.userRepository.findOne({ where: { id: user.id } });
+      if (!exist) throw new NotFoundException('User not found');
 
-    exist.access_token = '';
-    await this.userRepository.save(exist);
-    return true;
-  } catch (err) {
-    this.handleUnknown(err);
+      exist.access_token = '';
+      await this.userRepository.save(exist);
+      return true;
+    } catch (err) {
+      this.handleUnknown(err);
+    }
   }
-}
 }

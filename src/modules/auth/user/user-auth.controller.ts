@@ -25,15 +25,25 @@ export class UserAuthController {
 
   @Post('register')
   async register(@Body() body: UserRegisterDto) {
-    const { userWithRole, access_token } = await this.userAuthService.register(body);
-    const user = {
-      name: userWithRole.name,
-      image: userWithRole.image,
-    }
+    const message = await this.userAuthService.register(body);
     return {
       success: true,
-      message: 'User registered successfully',
-      data: { user, access_token },
+      message: message,
+    };
+  }
+  @Post('otp/verification')
+  async otpVerification(@Body() body: { email: string; otp: string }) {
+    const result = await this.userAuthService.verifyOtp(body.email, body.otp);
+    return {
+      success: true,
+      message: result.message,
+      data: {
+        user: {
+          id: result.user?.id,
+          name: result.user?.name,
+        },
+        access_token: result.token,
+      }
     };
   }
 
@@ -41,11 +51,11 @@ export class UserAuthController {
   @HttpCode(200)
   async login(@Body() body: UserLoginDto) {
     const user = await this.userAuthService.validateUser(body.email, body.password);
-    const { token, refresh_token, role } = await this.userAuthService.login(user);
+    const result = await this.userAuthService.login(user);
     return {
       success: true,
-      message: 'User logged in successfully',
-      data: { access_token: token, refresh_token, role },
+      message: result.message,
+      data: { access_token: result.token, refresh_token: result.refresh_token, role: result.role },
     };
   }
 
@@ -83,25 +93,6 @@ export class UserAuthController {
   async changePassword(@Body() body: { oldPassword: string; newPassword: string }, @CurrentUser() user: User) {
     await this.userAuthService.changePassword(body, user);
     return { success: true, message: 'Password updated successfully' };
-  }
-
-  @Post('current-location')
-  @UseGuards(UserJwtAuthGuard)
-  async currentLocation(@CurrentUser() user: User, @Body() body: { langitude: number; latitude: number }) {
-    const updated = await this.userAuthService.currentLocation(user.id, body);
-    return { success: true, message: 'Location updated successfully', data: updated };
-  }
-
-  @Get('mode')
-  @UseGuards(UserJwtAuthGuard, RolesGuard)
-  @Roles('driver')
-  async changeMode(@CurrentUser() user: User) {
-    const updated = await this.userAuthService.modeChange(user);
-    return {
-      success: true,
-      message: `Driver is now ${updated.isOnline ? 'Online' : 'Offline'}`,
-      data: updated,
-    };
   }
 
   @Post('logout')
