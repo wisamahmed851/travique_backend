@@ -18,11 +18,26 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { multerConfig } from 'src/common/utils/multer.config';
 import { RolesGuard } from 'src/common/guards/roles.guard';
 import { Roles } from 'src/common/decorators/roles.decorator';
+import { OAuth2Client } from 'google-auth-library';
 
 @Controller('user')
 export class UserAuthController {
   constructor(private readonly userAuthService: UserAuthService) { }
 
+
+  @Post('withgoogle')
+  async withGoogle(@Body() body: { token: string }) {
+    const result = await this.userAuthService.googleLogin(body.token);
+    return {
+      success: true,
+      message: result.message,
+      data: {
+        user: result.user,
+        access_token: result.access_token,
+        referes_token: result.refresh_token,
+      }
+    };
+  }
   @Post('register')
   async register(@Body() body: UserRegisterDto) {
     const message = await this.userAuthService.register(body);
@@ -31,6 +46,7 @@ export class UserAuthController {
       message: message,
     };
   }
+
   @Post('otp/verification')
   async otpVerification(@Body() body: { email: string; otp: string }) {
     const result = await this.userAuthService.verifyOtp(body.email, body.otp);
@@ -101,4 +117,5 @@ export class UserAuthController {
     await this.userAuthService.logout(user);
     return { success: true, message: 'User logged out successfully' };
   }
+
 }

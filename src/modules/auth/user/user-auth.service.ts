@@ -17,9 +17,12 @@ import { sanitizeUser } from 'src/common/utils/sanitize.util';
 import { City } from 'src/modules/city/entity/city.entity';
 import { ConfigService } from '@nestjs/config';
 import { MailService } from 'src/common/mail/mail.service';
+import { OAuth2Client } from 'google-auth-library';
 
 @Injectable()
 export class UserAuthService {
+  private client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+
   constructor(
     @InjectRepository(User)
     private userRepository: Repository<User>,
@@ -45,6 +48,46 @@ export class UserAuthService {
     throw new InternalServerErrorException('Unexpected error occurred', {
       cause: err as Error,
     });
+  }
+
+  async googleLogin(token: string) {
+    try {
+      const ticket = await this.client.verifyIdToken({
+        idToken: token,
+        audience: process.env.GOOGLE_CLIENT_ID,
+      });
+
+      const payload = ticket.getPayload();
+      if (!payload) throw new BadRequestException("Token is invalid");
+
+      const { email, name, picture } = payload;
+
+      let user = await this.userRepository.findOne({ where: { email: email } });
+      let message = "You are logged in successfuly";
+      if (!user) {
+        user = this.userRepository.create({
+          name: name,
+          email: email,
+          image: picture,
+          is_verified: true,
+        });
+        await this.userRepository.save(user);
+        message = 'you are registered successfull';
+      }
+
+      const jwtPaylod = { id: user.id, email: user.email, role: 'user' };
+      const access_token = this.jwtService.sign(jwtPaylod, { expiresIn: '30m' });
+      const refresh_token = this.jwtService.sign(jwtPaylod, { expiresIn: '7d' });
+
+
+      user.access_token = access_token;
+      user.refresh_token = refresh_token;
+      await this.userRepository.save(user);
+
+      return { user, access_token, refresh_token, message }
+    } catch (e) {
+      this.handleUnknown(e);
+    }
   }
 
   async register(body: UserRegisterDto) {
@@ -117,6 +160,7 @@ export class UserAuthService {
       await queryRunner.release();
     }
   }
+
   async verifyOtp(email: string, otp: string) {
     try {
       const user = await this.userRepository.findOne({ where: { email } });
@@ -154,8 +198,6 @@ export class UserAuthService {
       this.handleUnknown(err);
     }
   }
-
-
 
   async validateUser(email: string, password: string) {
     try {
@@ -200,7 +242,7 @@ export class UserAuthService {
       user.access_token = token;
       user.refresh_token = refresh_token;
       await this.userRepository.save(user);
-      if(user.access_token){
+      if (user.access_token) {
         let message = "User Logged in Successfull";
       }
 
@@ -288,4 +330,5 @@ export class UserAuthService {
       this.handleUnknown(err);
     }
   }
+
 }
