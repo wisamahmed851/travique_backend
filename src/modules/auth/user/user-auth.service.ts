@@ -54,7 +54,7 @@ export class UserAuthService {
     try {
       const ticket = await this.client.verifyIdToken({
         idToken: token,
-        audience: process.env.GOOGLE_CLIENT_ID,
+        audience: '1065376512567-u7aolqk1c2esmhfccbuea09gonmbrso5.apps.googleusercontent.com',
       });
 
       const payload = ticket.getPayload();
