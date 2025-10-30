@@ -71,7 +71,7 @@ export class UserAuthController {
     return {
       success: true,
       message: result.message,
-      data: { access_token: result.token, refresh_token: result.refresh_token, role: result.role },
+      data: { access_token: result.token, refresh_token: result.refresh_token, user: result.user },
     };
   }
 

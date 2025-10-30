@@ -245,9 +245,18 @@ export class UserAuthService {
       if (user.access_token) {
         let message = "User Logged in Successfull";
       }
-
+      const mainUser = {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+      }
       const role = roles[0]?.role;
-      return { user, token, refresh_token, role };
+      return {
+        user: mainUser,
+        token,
+        refresh_token,
+        role
+      };
     } catch (err) {
       this.handleUnknown(err);
     }
