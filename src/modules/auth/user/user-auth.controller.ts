@@ -38,12 +38,13 @@ export class UserAuthController {
       }
     };
   }
+  @HttpCode(201)
   @Post('register')
   async register(@Body() body: UserRegisterDto) {
     const message = await this.userAuthService.register(body);
     return {
       success: true,
-      message: message,
+      message: message.message,
     };
   }
 
