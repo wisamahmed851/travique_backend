@@ -217,6 +217,7 @@ export class UserAuthService {
 
   async login(user: User) {
     try {
+      let message = '';
       if (!user.is_verified) {
         // Generate and resend OTP
         const otp = Math.floor(100000 + Math.random() * 900000).toString();
@@ -225,7 +226,7 @@ export class UserAuthService {
         await this.userRepository.save(user);
         await this.mailSerivce.sendVerificationEmail(user.email, otp);
 
-        return { message: 'Account not verified. New OTP sent to your email.' };
+        throw new BadRequestException('Account not verified. New OTP sent to your email.');
       }
 
       // Fetch roles
@@ -233,10 +234,12 @@ export class UserAuthService {
         where: { user_id: user.id },
         relations: ['role'],
       });
+
       const roleNames = roles.map((r) => r.role.name);
       const payload = { sub: user.id, email: user.email, roles: roleNames };
 
       const token = this.jwtService.sign(payload, { expiresIn: '30m' });
+
       const refresh_token = this.jwtService.sign(payload, { expiresIn: '7d' });
 
       user.access_token = token;
@@ -255,6 +258,7 @@ export class UserAuthService {
         user: mainUser,
         token,
         refresh_token,
+        message,
         role
       };
     } catch (err) {
