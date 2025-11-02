@@ -9,7 +9,6 @@ import {
   PrimaryGeneratedColumn,
 } from 'typeorm';
 import { Exclude } from 'class-transformer';
-import { City } from 'src/modules/city/entity/city.entity';
 import { UserRole } from 'src/modules/assig-roles-user/entity/user-role.entity';
 
 @Entity()
@@ -36,13 +35,6 @@ export class User {
   @Column({ nullable: true })
   gender: string;
 
-  @Column({ nullable: true })
-  city_id: number;
-
-  @ManyToOne(() => City, { onDelete: 'CASCADE', eager: true })
-  @JoinColumn({ name: 'city_id' })
-  city: City;
-
   @Column({
     type: 'smallint',
     default: 1,
@@ -58,6 +50,14 @@ export class User {
     comment: 'true = verified, false = not verified',
   })
   is_verified: boolean;
+
+
+  @Column({
+    type: 'boolean',
+    default: false,
+    comment: 'true = verified, false = not verified',
+  })
+  otp_verified: boolean;
 
   // ✅ OTP for verification
   @Column({ nullable: true })

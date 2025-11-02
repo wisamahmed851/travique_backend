@@ -14,10 +14,10 @@ import { Role } from 'src/modules/roles/entity/roles.entity';
 import { UserRole } from 'src/modules/assig-roles-user/entity/user-role.entity';
 import { UpdateProfileDto, UserRegisterDto } from './dtos/user-auth.dto';
 import { sanitizeUser } from 'src/common/utils/sanitize.util';
-import { City } from 'src/modules/city/entity/city.entity';
 import { ConfigService } from '@nestjs/config';
 import { MailService } from 'src/common/mail/mail.service';
 import { OAuth2Client } from 'google-auth-library';
+import { use } from 'passport';
 
 @Injectable()
 export class UserAuthService {
@@ -31,11 +31,9 @@ export class UserAuthService {
     private roleRepo: Repository<Role>,
     @InjectRepository(UserRole)
     private userRoleRepo: Repository<UserRole>,
-    @InjectRepository(City)
-    private cityRepo: Repository<City>,
     private readonly dataSource: DataSource,
     private readonly configService: ConfigService,
-    private readonly mailSerivce: MailService,
+    private readonly mailService: MailService,
   ) { }
 
   private handleUnknown(err: unknown): never {
@@ -109,14 +107,6 @@ export class UserAuthService {
         body.password = await bcrypt.hash(body.password, 10);
       }
 
-      // Validate city (optional)
-      if (body.city_id) {
-        const city = await queryRunner.manager.findOne(City, {
-          where: { id: body.city_id },
-        });
-        if (!city) throw new NotFoundException('City not found');
-      }
-
       // Generate OTP
       const otp = Math.floor(100000 + Math.random() * 900000).toString();
       const otpExpiration = new Date(Date.now() + 5 * 60 * 1000); // 5 min
@@ -128,7 +118,6 @@ export class UserAuthService {
         password: body.password,
         phone: body.phone,
         gender: body.gender,
-        city_id: body.city_id,
         is_verified: false,
         otp,
         otp_expiration: otpExpiration,
@@ -150,7 +139,7 @@ export class UserAuthService {
       await queryRunner.commitTransaction();
 
       // Send OTP email
-      await this.mailSerivce.sendVerificationEmail(savedUser.email, otp);
+      await this.mailService.sendVerificationEmail(savedUser.email, otp);
 
       return { message: 'OTP sent to your email. Please verify to activate your account.' };
     } catch (err) {
@@ -224,9 +213,9 @@ export class UserAuthService {
         user.otp = otp;
         user.otp_expiration = new Date(Date.now() + 5 * 60 * 1000);
         await this.userRepository.save(user);
-        await this.mailSerivce.sendVerificationEmail(user.email, otp);
+        await this.mailService.sendVerificationEmail(user.email, otp);
 
-        throw new BadRequestException('Account not verified. New OTP sent to your email.');
+        return { message: 'Account not verified. New OTP sent to your email.', email: user.email };
       }
 
       // Fetch roles
@@ -265,6 +254,51 @@ export class UserAuthService {
       this.handleUnknown(err);
     }
   }
+
+  async forgotPassword(email: string) {
+    const user = await this.userRepository.findOne({ where: { email } });
+    if (!user) throw new NotFoundException("User not found");
+
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    user.otp = otp;
+    user.otp_expiration = new Date(Date.now() + 5 * 60 * 1000);
+    await this.userRepository.save(user);
+
+    await this.mailService.sendVerificationEmail(user.email, otp);
+
+    // Return OTP as well (not secure, for dev/testing only)
+    return { message: "OTP sent to email", email: user.email };
+  }
+
+  // user-auth.service.ts
+  async verifyOtpReset(email: string, otp: string) {
+    const user = await this.userRepository.findOne({ where: { email } });
+    if (!user) throw new NotFoundException("User not found");
+
+    if (user.otp !== otp) throw new BadRequestException("Invalid OTP");
+    if (user.otp_expiration < new Date()) throw new BadRequestException("OTP expired");
+
+    user.otp_verified = true; // optional field
+    await this.userRepository.save(user);
+
+    return { message: "OTP verified successfully", email: user.email };
+  }
+
+  async resetPassword(email: string, newPassword: string) {
+    const user = await this.userRepository.findOne({ where: { email } });
+    if (!user) throw new NotFoundException("User not found");
+    if (!user.otp_verified) throw new BadRequestException("You are not verified for this password reset");
+
+    user.password = await bcrypt.hash(newPassword, 10);
+    user.otp = '';
+    user.otp_verified = false;
+
+    await this.userRepository.save(user);
+    return { message: "Password reset successful" };
+  }
+
+
+
 
 
   async refreshToken(refreshToken: string) {

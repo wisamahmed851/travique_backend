@@ -40,8 +40,6 @@ export class UsersService {
         throw new BadRequestException('User with this email already exists');
 
       if (dto.password) dto.password = await bcrypt.hash(dto.password, 10);
-      const city = await this.cityRepo.findOne({ where: { id: dto.city_id } });
-      if (!city) throw new NotFoundException('City not found');
       const saved = await this.userRepository.save(
         this.userRepository.create({
           name: dto.name,
@@ -49,8 +47,6 @@ export class UsersService {
           password: dto.password,
           phone: dto.phone,
           address: dto.address,
-          city_id: dto.city_id,
-          city: city,
           image: dto.image,
         }),
       );

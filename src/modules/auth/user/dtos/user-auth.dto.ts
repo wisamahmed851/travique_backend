@@ -34,20 +34,6 @@ export class UserRegisterDto {
   @IsOptional()
   role: string;
 
-  @IsOptional()
-  city_id: number;
-
-  @IsOptional()
-  identity_no: string;
-
-  @IsOptional()
-  identity_validity_date: Date;
-
-  @IsOptional()
-  identity_card_front_url: string;
-
-  @IsOptional()
-  identity_card_back_url: string;
 }
 
 export class UpdateProfileDto {
@@ -70,14 +56,5 @@ export class UpdateProfileDto {
   gender: string;
 
   @IsOptional()
-  city: string;
-
-  @IsOptional()
   image: string;
-
-  @IsNotEmpty()
-  city_id: number;
-
-  @IsNotEmpty()
-  zone_id: number;
 }

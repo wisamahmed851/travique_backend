@@ -72,9 +72,41 @@ export class UserAuthController {
     return {
       success: true,
       message: result.message,
-      data: { access_token: result.token, refresh_token: result.refresh_token, user: result.user },
+      data: { access_token: result.token, refresh_token: result.refresh_token, user: result.user, email: result.email },
     };
   }
+  // user-auth.controller.ts
+  @Post('forgot-password')
+  async forgotPassword(@Body('email') email: string) {
+    const result = await this.userAuthService.forgotPassword(email)
+    return {
+      success: true,
+      message: result.message,
+      data: {
+        email: result.email,
+      }
+    };
+  }
+
+  // user-auth.controller.ts
+  @Post('verify-otp')
+  async verifyOtp(@Body() body: { email: string; otp: string }) {
+    const result = await this.userAuthService.verifyOtpReset(body.email, body.otp);
+    return {
+      success: true,
+      message: result.message,
+      data: {
+        email: result.email,
+      }
+    };
+  }
+
+  // user-auth.controller.ts
+  @Post('reset-password')
+  async resetPassword(@Body() body: { email: string; new_password: string }) {
+    return await this.userAuthService.resetPassword(body.email, body.new_password);
+  }
+
 
   @Post('refresh-token')
   async refreshToken(@Body('refresh_token') refreshToken: string) {

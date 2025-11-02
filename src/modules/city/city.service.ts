@@ -1,14 +1,15 @@
 import { Injectable, NotFoundException, InternalServerErrorException, BadRequestException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Repository } from "typeorm";
+import { BSON, DeepPartial, Repository } from "typeorm";
 import { City } from "./entity/city.entity";
+import { CityStoreDto } from "./dtos/city.dto";
 
 @Injectable()
 export class CityService {
   constructor(
     @InjectRepository(City)
     private readonly cityRepository: Repository<City>,
-  ) {}
+  ) { }
 
   // Common error handling function
   private handleError(error: any) {
@@ -17,16 +18,18 @@ export class CityService {
   }
 
   // Create
-  async createCity(name: string, created_by: number) {
+  async createCity(body: CityStoreDto, created_by: number) {
     try {
-      if (!name || name.trim() === '') {
-        throw new BadRequestException('City name is required');
-      }
-      if (!created_by) {
-        throw new BadRequestException('Created_by is required');
-      }
+      if (!body.name?.trim()) throw new BadRequestException('City name is required');
+      if (!created_by) throw new BadRequestException('Created_by is required');
 
-      const city = this.cityRepository.create({ name: name.trim(), created_by });
+      const city = this.cityRepository.create({
+        name: body.name,
+        description: body.description,
+        image: body.image,
+        created_by,
+      } as DeepPartial<City>);
+
       const savedCity = await this.cityRepository.save(city);
 
       return {
@@ -39,10 +42,11 @@ export class CityService {
     }
   }
 
+
   // Find all
   async getAllCities() {
     try {
-      const cities = await this.cityRepository.find({ relations: ['admin'] });
+      const cities = await this.cityRepository.find();
       return {
         success: true,
         message: 'Cities fetched successfully',
@@ -58,7 +62,7 @@ export class CityService {
     try {
       if (!id) throw new BadRequestException('City ID is required');
 
-      const city = await this.cityRepository.findOne({ where: { id }, relations: ['admin'] });
+      const city = await this.cityRepository.findOne({ where: { id } });
       if (!city) throw new NotFoundException(`City with ID ${id} not found`);
 
       return {
@@ -72,15 +76,15 @@ export class CityService {
   }
 
   // Update
-  async updateCity(id: number, name: string) {
+  async updateCity(id: number, body: CityStoreDto) {
     try {
       if (!id) throw new BadRequestException('City ID is required');
-      if (!name || name.trim() === '') throw new BadRequestException('City name is required');
+      if (!body.name || body.name.trim() === '') throw new BadRequestException('City name is required');
 
       const city = await this.cityRepository.findOne({ where: { id } });
       if (!city) throw new NotFoundException(`City with ID ${id} not found`);
 
-      city.name = name.trim();
+      city.name = body.name.trim();
       city.updated_at = new Date().toISOString().split('T')[0];
 
       const updatedCity = await this.cityRepository.save(city);

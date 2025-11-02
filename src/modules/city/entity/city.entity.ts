@@ -1,25 +1,24 @@
 import { IsNotEmpty } from "class-validator";
 import { Admin } from "src/modules/admin/entity/admin.entity";
 import { User } from "src/modules/users/entity/user.entity";
-import { BeforeInsert, Column, Entity, JoinColumn, ManyToOne, OneToMany, PrimaryGeneratedColumn } from "typeorm";
+import { BeforeInsert, Column, Entity, PrimaryGeneratedColumn } from "typeorm";
 
 @Entity({ name: "cities" })
 export class City {
     @PrimaryGeneratedColumn()
     id: number;
 
-    @Column({ nullable: false })
+    @Column()
     name: string;
+
+    @Column({ nullable: false })
+    description: string;
+
+    @Column({ nullable: false })
+    image: string;
 
     @Column()
     created_by: number;
-
-    @ManyToOne(() => Admin)
-    @JoinColumn({ name: 'created_by' })
-    admin: Admin;
-
-    @OneToMany(() => User, (user) => user.city)
-    users: User[];
 
     @Column({ type: 'date' })
     created_at: string;
