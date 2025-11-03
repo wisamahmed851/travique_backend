@@ -104,7 +104,12 @@ export class UserAuthController {
   // user-auth.controller.ts
   @Post('reset-password')
   async resetPassword(@Body() body: { email: string; new_password: string }) {
-    return await this.userAuthService.resetPassword(body.email, body.new_password);
+    const result = await this.userAuthService.resetPassword(body.email, body.new_password);
+    return {
+      success: true,
+      message: result.message,
+      data: {},
+    };
   }
 
 
