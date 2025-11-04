@@ -153,7 +153,7 @@ export class UserAuthController {
   @UseGuards(UserJwtAuthGuard)
   async logout(@CurrentUser() user: User) {
     await this.userAuthService.logout(user);
-    return { success: true, message: 'User logged out successfully' };
+    return { success: true, message: 'User logged out successfully', data: {} };
   }
 
 }
