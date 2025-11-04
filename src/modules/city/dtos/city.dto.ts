@@ -14,11 +14,11 @@ export class CityStoreDto{
 export class CityUpdateDto{
 
     @IsOptional()
-    name: String;
+    name: string;
 
     @IsOptional()
-    description: String;
+    description: string;
 
     @IsOptional()
-    image: String;
+    image: string;
 }

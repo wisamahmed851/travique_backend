@@ -1,7 +1,8 @@
 import { IsNotEmpty } from "class-validator";
 import { Admin } from "src/modules/admin/entity/admin.entity";
+import { Attraction } from "src/modules/attractions/entity/attraction.entity";
 import { User } from "src/modules/users/entity/user.entity";
-import { BeforeInsert, Column, Entity, PrimaryGeneratedColumn } from "typeorm";
+import { BeforeInsert, Column, Entity, OneToMany, PrimaryGeneratedColumn } from "typeorm";
 
 @Entity({ name: "cities" })
 export class City {
@@ -33,4 +34,7 @@ export class City {
         this.created_at = onlyDate;
         this.updated_at = onlyDate;
     }
+
+    @OneToMany(() => Attraction, (attraction) => attraction.city)
+    attractions: Attraction[];
 }
