@@ -39,4 +39,41 @@ export class CreateAttractionDto {
   longitude?: number;
 }
 
-export class UpdateAttractionDto extends CreateAttractionDto {}
+export class UpdateAttractionDto  {
+  @Type(() => Number) // ✅ Convert string to number automatically
+  @IsNumber()
+  @IsOptional()
+  city_id: number;
+
+  @IsString()
+  @IsOptional()
+  name: string;
+
+  @IsEnum(AttractionCategory)
+  @IsOptional()
+  category: AttractionCategory;
+
+  @IsOptional()
+  @IsString()
+  description?: string;
+
+  @IsOptional()
+  @IsString()
+  contact_info?: string;
+
+  @IsOptional()
+  @IsString()
+  opening_hours?: string;
+
+  @IsOptional()
+  @IsString()
+  website_url?: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  latitude?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  longitude?: number;
+}
