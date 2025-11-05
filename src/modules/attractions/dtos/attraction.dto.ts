@@ -1,7 +1,9 @@
 import { IsEnum, IsNotEmpty, IsNumber, IsOptional, IsString } from 'class-validator';
+import { Type } from 'class-transformer';
 import { AttractionCategory } from 'src/common/enums/attraction.enum';
 
 export class CreateAttractionDto {
+  @Type(() => Number) // ✅ Convert string to number automatically
   @IsNumber()
   city_id: number;
 
@@ -29,9 +31,11 @@ export class CreateAttractionDto {
   website_url?: string;
 
   @IsOptional()
+  @Type(() => Number)
   latitude?: number;
 
   @IsOptional()
+  @Type(() => Number)
   longitude?: number;
 }
 

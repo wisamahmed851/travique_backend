@@ -48,7 +48,7 @@ export class AttractionController {
 
     const attraction = await this.attractionService.createAttraction(
       body,
-      mainImageFile?.filename,
+      mainImageFile?.filename ?? '',
       galleryFiles,
     );
     return this.formatResponse(true, 'Attraction created successfully', [attraction]);
@@ -68,7 +68,7 @@ export class AttractionController {
     return this.formatResponse(true, 'Attraction fetched successfully', [data]);
   }
 
-  // ✅ Update
+  
   @Patch('update/:id')
   @UseInterceptors(
     FileFieldsInterceptor(
@@ -91,7 +91,7 @@ export class AttractionController {
     const updated = await this.attractionService.updateAttraction(
       id,
       body,
-      mainImageFile?.filename,
+      mainImageFile?.filename ?? '',
       galleryFiles,
     );
     return this.formatResponse(true, 'Attraction updated successfully', [updated]);

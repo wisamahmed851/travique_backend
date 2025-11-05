@@ -20,6 +20,7 @@ import { UserAuthSeederModule } from './modules/auth/user/seeder/user-auth-seede
 import { AdminAuthSeederModule } from './modules/admin/seeder/admin-auth-seeder.module';
 import { CityModule } from './modules/city/city.module';
 import { AdminAuthSeederService } from './modules/admin/seeder/admin-auth-seeder.service';
+import { AttractionModule } from './modules/attractions/attraction.module';
 
 @Module({
   imports: [
@@ -57,6 +58,7 @@ import { AdminAuthSeederService } from './modules/admin/seeder/admin-auth-seeder
     UserAuthSeederModule,
     AdminAuthSeederModule,
     CityModule,
+    AttractionModule,
   ],
   controllers: [AppController],
   providers: [AppService],

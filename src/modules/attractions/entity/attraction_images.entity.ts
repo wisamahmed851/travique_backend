@@ -12,4 +12,7 @@ export class AttractionImages {
 
     @Column()
     attraction_id: number;
+
+    @Column({ type: 'varchar', length: 255 })
+    image_url: string; // ✅ Add this line
 }
