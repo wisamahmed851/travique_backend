@@ -21,6 +21,7 @@ import { AdminAuthSeederModule } from './modules/admin/seeder/admin-auth-seeder.
 import { CityModule } from './modules/city/city.module';
 import { AdminAuthSeederService } from './modules/admin/seeder/admin-auth-seeder.service';
 import { AttractionModule } from './modules/attractions/attraction.module';
+import { ReviewModule } from './modules/review/review.module';
 
 @Module({
   imports: [
@@ -59,6 +60,7 @@ import { AttractionModule } from './modules/attractions/attraction.module';
     AdminAuthSeederModule,
     CityModule,
     AttractionModule,
+    ReviewModule,
   ],
   controllers: [AppController],
   providers: [AppService],

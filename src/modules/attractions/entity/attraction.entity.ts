@@ -11,6 +11,7 @@ import {
 import { City } from 'src/modules/city/entity/city.entity';
 import { AttractionCategory } from 'src/common/enums/attraction.enum';
 import { AttractionImages } from './attraction_images.entity';
+import { Review } from 'src/modules/review/entity/review.entity';
 
 @Entity('attractions')
 export class Attraction {
@@ -89,4 +90,7 @@ export class Attraction {
         default: () => 'CURRENT_TIMESTAMP',
     })
     updated_at: Date;
+
+    @OneToMany(() => Review, (review) => review.attraction)
+    reviews: Review;
 }

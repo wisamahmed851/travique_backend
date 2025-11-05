@@ -10,6 +10,7 @@ import {
 } from 'typeorm';
 import { Exclude } from 'class-transformer';
 import { UserRole } from 'src/modules/assig-roles-user/entity/user-role.entity';
+import { Review } from 'src/modules/review/entity/review.entity';
 
 @Entity()
 export class User {
@@ -92,4 +93,6 @@ export class User {
 
   @OneToMany(() => UserRole, (userRole) => userRole.role)
   userRoles: UserRole[];
+  @OneToMany(() => Review, (reviews) => reviews.user)
+  reviews: Review;
 }
