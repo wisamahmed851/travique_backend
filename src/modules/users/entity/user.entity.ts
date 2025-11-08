@@ -3,14 +3,13 @@ import {
   BeforeInsert,
   Column,
   Entity,
-  JoinColumn,
-  ManyToOne,
   OneToMany,
   PrimaryGeneratedColumn,
 } from 'typeorm';
 import { Exclude } from 'class-transformer';
 import { UserRole } from 'src/modules/assig-roles-user/entity/user-role.entity';
 import { Review } from 'src/modules/review/entity/review.entity';
+import { Favorite } from 'src/modules/favorites/entity/favorite.entity';
 
 @Entity()
 export class User {
@@ -44,7 +43,6 @@ export class User {
   })
   status: number;
 
-  // ✅ account verification status
   @Column({
     type: 'boolean',
     default: false,
@@ -95,4 +93,6 @@ export class User {
   userRoles: UserRole[];
   @OneToMany(() => Review, (reviews) => reviews.user)
   reviews: Review;
+  @OneToMany(() => Favorite, (favorite) => favorite.user)
+  favorite: Favorite;
 }

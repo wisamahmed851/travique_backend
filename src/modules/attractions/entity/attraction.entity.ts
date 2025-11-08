@@ -12,6 +12,7 @@ import { City } from 'src/modules/city/entity/city.entity';
 import { AttractionCategory } from 'src/common/enums/attraction.enum';
 import { AttractionImages } from './attraction_images.entity';
 import { Review } from 'src/modules/review/entity/review.entity';
+import { Favorite } from 'src/modules/favorites/entity/favorite.entity';
 
 @Entity('attractions')
 export class Attraction {
@@ -93,4 +94,7 @@ export class Attraction {
 
     @OneToMany(() => Review, (review) => review.attraction)
     reviews: Review;
+
+    @OneToMany(() => Favorite, (favorites) => favorites.attraction)
+    favorite: Favorite;
 }
