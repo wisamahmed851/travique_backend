@@ -23,6 +23,8 @@ import { AdminAuthSeederService } from './modules/admin/seeder/admin-auth-seeder
 import { AttractionModule } from './modules/attractions/attraction.module';
 import { ReviewModule } from './modules/review/review.module';
 import { FavoriteModule } from './modules/favorites/favorite.module';
+import { ExperienceModule } from './modules/experiences/experience.module';
+import { ExperienceSeederService } from './modules/experiences/seeder/experience.seeder';
 
 @Module({
   imports: [
@@ -63,6 +65,7 @@ import { FavoriteModule } from './modules/favorites/favorite.module';
     AttractionModule,
     ReviewModule,
     FavoriteModule,
+    ExperienceModule,
   ],
   controllers: [AppController],
   providers: [AppService],
@@ -70,9 +73,11 @@ import { FavoriteModule } from './modules/favorites/favorite.module';
 export class AppModule implements OnApplicationBootstrap {
   constructor(
     private readonly adminAuthSeederService: AdminAuthSeederService,
+    private readonly experienceSeederService: ExperienceSeederService,
   ) { }
 
   async onApplicationBootstrap() {
     await this.adminAuthSeederService.seed();
+    await this.experienceSeederService.seed();
   }
 }

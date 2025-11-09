@@ -2,7 +2,8 @@ import { IsNotEmpty } from "class-validator";
 import { Admin } from "src/modules/admin/entity/admin.entity";
 import { Attraction } from "src/modules/attractions/entity/attraction.entity";
 import { User } from "src/modules/users/entity/user.entity";
-import { BeforeInsert, Column, Entity, OneToMany, PrimaryGeneratedColumn } from "typeorm";
+import { BeforeInsert, Column, Entity, ManyToMany, OneToMany, PrimaryGeneratedColumn } from "typeorm";
+import { CityExperience } from "src/modules/experiences/entity/city-experience.entity";
 
 @Entity({ name: "cities" })
 export class City {
@@ -37,4 +38,7 @@ export class City {
 
     @OneToMany(() => Attraction, (attraction) => attraction.city)
     attractions: Attraction[];
+
+    @OneToMany(() => CityExperience, (cityExperience) => cityExperience.city)
+    cityExperiences: CityExperience[];
 }

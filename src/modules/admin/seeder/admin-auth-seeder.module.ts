@@ -8,7 +8,7 @@ import { Role } from 'src/modules/roles/entity/roles.entity';
 @Module({
   imports: [TypeOrmModule.forFeature([Admin, Role, AdminRole])],
   providers: [AdminAuthSeederService],
-  exports: [AdminAuthSeederService], // Export to use in AppModule
+  exports: [AdminAuthSeederService],
 })
 export class AdminAuthSeederModule {
   constructor(

@@ -17,11 +17,11 @@ import { Favorite } from 'src/modules/favorites/entity/favorite.entity';
 @Entity('attractions')
 export class Attraction {
     @PrimaryGeneratedColumn('increment')
-    id: number; // You can switch to 'uuid' if your DB uses UUIDs
+    id: number; 
 
     @ManyToOne(() => City, (city) => city.attractions, {
-        onDelete: 'CASCADE', // Deletes attractions if the city is deleted
-        eager: false, // Load only when needed
+        onDelete: 'CASCADE',
+        eager: false,
     })
     @JoinColumn({ name: 'city_id' })
     city: City;

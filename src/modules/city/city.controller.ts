@@ -10,6 +10,7 @@ import {
   UseGuards,
   UseInterceptors,
   UploadedFile,
+  Query,
 } from "@nestjs/common";
 import { CityService } from "./city.service";
 import { AdminJwtAuthGuard } from "src/modules/auth/admin/admin-jwt.guard";
@@ -21,12 +22,15 @@ import { multerConfig } from "src/common/utils/multer.config";
 @Controller("admin/city")
 @UseGuards(AdminJwtAuthGuard)
 export class CityController {
-  constructor(private readonly cityService: CityService) {}
+  constructor(private readonly cityService: CityService) { }
 
   private formatResponse(success: boolean, message: string, data: any = []) {
     return { success, message, data };
   }
 
+  /**
+   * Create a new city with multiple experiences
+   */
   @Post("store")
   @UseInterceptors(FileInterceptor("image", multerConfig("uploads")))
   async createCity(
@@ -41,18 +45,30 @@ export class CityController {
     return this.formatResponse(true, "City created successfully", [savedCity]);
   }
 
+  /**
+   * Get all cities — supports filters and search
+   */
   @Get("list")
-  async getAllCities() {
-    const cities = await this.cityService.getAllCities();
+  async getAllCities(
+    @Query("search") search?: string,
+    @Query("experienceId") experienceId?: number,
+  ) {
+    const cities = await this.cityService.getAllCities(search, experienceId);
     return this.formatResponse(true, "Cities fetched successfully", cities);
   }
 
+  /**
+   * Get a single city by ID
+   */
   @Get("show/:id")
   async getCityById(@Param("id", ParseIntPipe) id: number) {
     const city = await this.cityService.getCityById(id);
     return this.formatResponse(true, "City fetched successfully", [city]);
   }
 
+  /**
+   * Update a city — supports experience update and new image upload
+   */
   @Patch("update/:id")
   @UseInterceptors(FileInterceptor("image", multerConfig("uploads")))
   async updateCity(
@@ -67,6 +83,9 @@ export class CityController {
     return this.formatResponse(true, "City updated successfully", [updatedCity]);
   }
 
+  /**
+   * Delete a city
+   */
   @Delete("delete/:id")
   async deleteCity(@Param("id", ParseIntPipe) id: number) {
     await this.cityService.deleteCity(id);
