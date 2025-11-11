@@ -26,6 +26,7 @@ import { FavoriteModule } from './modules/favorites/favorite.module';
 import { ExperienceModule } from './modules/experiences/experience.module';
 import { ExperienceSeederService } from './modules/experiences/seeder/experience.seeder';
 import { CountryModule } from './modules/country/country.module';
+import { CountrySeederService } from './modules/country/seeder/country.seeder';
 
 @Module({
   imports: [
@@ -76,10 +77,12 @@ export class AppModule implements OnApplicationBootstrap {
   constructor(
     private readonly adminAuthSeederService: AdminAuthSeederService,
     private readonly experienceSeederService: ExperienceSeederService,
+    private readonly countrySeederService: CountrySeederService,
   ) { }
 
   async onApplicationBootstrap() {
     await this.adminAuthSeederService.seed();
     await this.experienceSeederService.seed();
+    await this.countrySeederService.seed();
   }
 }

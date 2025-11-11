@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsOptional, IsArray, ArrayNotEmpty, IsInt } from "class-validator";
+import { IsNotEmpty, IsOptional, IsArray, ArrayNotEmpty, IsInt, IsNumber } from "class-validator";
 import { Type } from "class-transformer";
 
 export class CityStoreDto {
@@ -16,6 +16,10 @@ export class CityStoreDto {
   @ArrayNotEmpty()
   @Type(() => Number)
   experience_ids?: number[];
+
+  @IsNotEmpty()
+  // @IsNumber()
+  country_id: number; 
 }
 
 export class CityUpdateDto {
@@ -32,4 +36,8 @@ export class CityUpdateDto {
   @IsArray()
   @Type(() => Number)
   experience_ids?: number[];
+
+  @IsNotEmpty()
+  @IsInt()
+  country_id: number; 
 }

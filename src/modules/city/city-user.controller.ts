@@ -10,9 +10,9 @@ export class CityUserController {
     }
 
     @Get("home")
-    async home() {
-        const popularcities = await this.cityService.home();
-        return this.formatResponse(true, "Popular cities", popularcities);
+    async Gethome() {
+        const homeData = await this.cityService.gethome();
+        return this.formatResponse(true, "Popular cities", homeData);
     }
 
     @Get()

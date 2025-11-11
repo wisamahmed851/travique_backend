@@ -19,7 +19,7 @@ import { CountryService } from "./country.service";
 import { CountryUpdateDto } from "./dtos/country.dto";
 
 @Controller("admin/experience")
-@UseGuards(AdminJwtAuthGuard)
+// @UseGuards(AdminJwtAuthGuard)
 export class CountryController {
     constructor(private readonly countryService: CountryService) { }
 

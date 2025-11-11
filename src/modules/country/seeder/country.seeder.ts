@@ -29,6 +29,6 @@ export class CountrySeederService {
     const entities = this.countryRepository.create(experiences);
     await this.countryRepository.save(entities);
 
-    this.logger.log("✅ Experience seeding completed successfully!");
+    this.logger.log("✅ Country seeding completed successfully!");
   }
 }

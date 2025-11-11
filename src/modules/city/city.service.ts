@@ -3,14 +3,15 @@ import {
   NotFoundException,
   BadRequestException,
   InternalServerErrorException,
-} from "@nestjs/common";
-import { InjectRepository } from "@nestjs/typeorm";
-import { DeepPartial, Repository } from "typeorm";
-import { City } from "./entity/city.entity";
-import { CityStoreDto, CityUpdateDto } from "./dtos/city.dto";
-import { CityExperience } from "../experiences/entity/city-experience.entity";
-import { Experience } from "../experiences/entity/experience.entity";
-import { Attraction } from "../attractions/entity/attraction.entity";
+} from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { DeepPartial, Repository } from 'typeorm';
+import { City } from './entity/city.entity';
+import { CityStoreDto, CityUpdateDto } from './dtos/city.dto';
+import { CityExperience } from '../experiences/entity/city-experience.entity';
+import { Experience } from '../experiences/entity/experience.entity';
+import { Attraction } from '../attractions/entity/attraction.entity';
+import { Country } from '../country/entity/country.entity';
 
 @Injectable()
 export class CityService {
@@ -26,18 +27,24 @@ export class CityService {
 
     @InjectRepository(Attraction)
     private readonly attractionRepository: Repository<Attraction>,
-  ) { }
+
+    @InjectRepository(Country)
+    private readonly countryRepository: Repository<Country>,
+  ) {}
 
   /**
    * Centralized error handler
    */
   private handleError(error: any): never {
-    console.error("CityService Error:", error);
-    if (error instanceof BadRequestException || error instanceof NotFoundException) {
+    console.error('CityService Error:', error);
+    if (
+      error instanceof BadRequestException ||
+      error instanceof NotFoundException
+    ) {
       throw error;
     }
     throw new InternalServerErrorException(
-      error.message || "Something went wrong while processing your request.",
+      error.message || 'Something went wrong while processing your request.',
     );
   }
 
@@ -46,26 +53,38 @@ export class CityService {
    */
   async createCity(body: CityStoreDto, created_by: number): Promise<City> {
     try {
-      if (!body.name?.trim()) throw new BadRequestException("City name is required");
-      if (!created_by) throw new BadRequestException("created_by is required");
+      if (!body.name?.trim())
+        throw new BadRequestException('City name is required');
+      if (!created_by) throw new BadRequestException('created_by is required');
+      if (!body.country_id)
+        throw new BadRequestException('Country ID is required');
 
-      // Step 1: Create city entity
+      // Step 1: Fetch the country by ID
+      const country = await this.cityRepository.manager
+        .getRepository(Country)
+        .findOne({ where: { id: body.country_id } });
+      if (!country) throw new NotFoundException('Country not found');
+
+      // Step 2: Create city entity
       const city = this.cityRepository.create({
         name: body.name.trim(),
         description: body.description?.trim(),
         image: body.image,
         created_by,
+        country, // Set the country relationship
       } as DeepPartial<City>);
 
-      // Step 2: Save the city first to get ID
+      // Step 3: Save the city first to get ID
       const savedCity = await this.cityRepository.save(city);
 
-      // Step 3: Handle experiences (if provided)
+      // Step 4: Handle experiences (if provided)
       if (body.experience_ids && body.experience_ids.length > 0) {
-        const experiences = await this.experienceRepository.findByIds(body.experience_ids);
+        const experiences = await this.experienceRepository.findByIds(
+          body.experience_ids,
+        );
 
         if (experiences.length === 0)
-          throw new NotFoundException("No valid experiences found");
+          throw new NotFoundException('No valid experiences found');
 
         const cityExperienceLinks = experiences.map((exp) =>
           this.cityExperienceRepository.create({
@@ -76,11 +95,15 @@ export class CityService {
 
         await this.cityExperienceRepository.save(cityExperienceLinks);
       }
+
+      // Return the saved city with related experiences
       const newCity = await this.cityRepository.findOne({
         where: { id: savedCity.id },
-        relations: ["cityExperiences", "cityExperiences.experience"],
-      })
-      if (!newCity) throw new NotFoundException("Somthing went wrong");
+        relations: ['cityExperiences', 'cityExperiences.experience', 'country'],
+      });
+
+      if (!newCity) throw new NotFoundException('Something went wrong');
+
       return newCity;
     } catch (error) {
       this.handleError(error);
@@ -94,22 +117,22 @@ export class CityService {
   async getAllCities(search?: string, experienceId?: number): Promise<any[]> {
     try {
       const qb = this.cityRepository
-        .createQueryBuilder("city")
-        .leftJoinAndSelect("city.cityExperiences", "cityExperience")
-        .leftJoinAndSelect("cityExperience.experience", "experience")
-        // .leftJoinAndSelect("city")
-        .loadRelationCountAndMap("city.attractionCount", "city.attractions") // count attractions
-        .orderBy("city.id", "DESC");
+        .createQueryBuilder('city')
+        .leftJoinAndSelect('city.cityExperiences', 'cityExperience')
+        .leftJoinAndSelect('cityExperience.experience', 'experience')
+        .leftJoinAndSelect("city.country", 'country')
+        .loadRelationCountAndMap('city.attractionCount', 'city.attractions') // count attractions
+        .orderBy('city.id', 'DESC');
 
       // Optional filters
       if (search) {
-        qb.andWhere("LOWER(city.name) LIKE :search", {
+        qb.andWhere('LOWER(city.name) LIKE :search', {
           search: `%${search.toLowerCase()}%`,
         });
       }
 
       if (experienceId) {
-        qb.andWhere("experience.id = :experienceId", { experienceId });
+        qb.andWhere('experience.id = :experienceId', { experienceId });
       }
 
       return await qb.getMany();
@@ -118,7 +141,7 @@ export class CityService {
     }
   }
 
-  async home() {
+  async gethome() {
     const popularcities = await this.cityRepository.find({
       order: { id: 'ASC' },
       take: 4,
@@ -126,12 +149,13 @@ export class CityService {
     });
     const experience = await this.experienceRepository.find({
       order: {
-        id: 'ASC'
+        id: 'ASC',
       },
       take: 4,
-      select : ['id', 'name', 'image',],
-    })
-    if (popularcities.length < 0) throw new NotFoundException("THere is not any cites in the list");
+      select: ['id', 'name', 'image'],
+    });
+    if (popularcities.length < 0)
+      throw new NotFoundException('THere is not any cites in the list');
     return { popular_cities: popularcities, experience: experience };
   }
 
@@ -140,14 +164,14 @@ export class CityService {
    */
   async getCityById(id: number): Promise<City> {
     try {
-      if (!id) throw new BadRequestException("City ID is required");
+      if (!id) throw new BadRequestException('City ID is required');
 
       const city = await this.cityRepository
-        .createQueryBuilder("city")
-        .leftJoinAndSelect("city.cityExperiences", "cityExperience")
-        .leftJoinAndSelect("cityExperience.experience", "experience")
-        .loadRelationCountAndMap("city.attractionCount", "city.attractions")
-        .where("city.id = :id", { id })
+        .createQueryBuilder('city')
+        .leftJoinAndSelect('city.cityExperiences', 'cityExperience')
+        .leftJoinAndSelect('cityExperience.experience', 'experience')
+        .loadRelationCountAndMap('city.attractionCount', 'city.attractions')
+        .where('city.id = :id', { id })
         .getOne();
 
       if (!city) throw new NotFoundException(`City with ID ${id} not found`);
@@ -163,14 +187,28 @@ export class CityService {
    */
   async updateCity(id: number, body: CityUpdateDto): Promise<City> {
     try {
-      if (!id) throw new BadRequestException("City ID is required");
+      if (!id) throw new BadRequestException('City ID is required');
 
-      const city = await this.cityRepository.findOne({ where: { id } });
+      const city = await this.cityRepository.findOne({
+        where: { id },
+        relations: ['country'],
+      });
       if (!city) throw new NotFoundException(`City with ID ${id} not found`);
 
+      // Update city fields
       city.name = body.name?.trim() || city.name;
       city.description = body.description?.trim() || city.description;
       city.image = body.image || city.image;
+
+      // If country_id is provided, update the country
+      if (body.country_id) {
+        const country = await this.cityRepository.manager
+          .getRepository(Country)
+          .findOne({ where: { id: body.country_id } });
+        if (!country) throw new NotFoundException('Country not found');
+
+        city.country = country; // Set the new country relationship
+      }
 
       await this.cityRepository.save(city);
 
@@ -179,7 +217,9 @@ export class CityService {
         // Remove old links
         await this.cityExperienceRepository.delete({ city: { id } });
 
-        const experiences = await this.experienceRepository.findByIds(body.experience_ids);
+        const experiences = await this.experienceRepository.findByIds(
+          body.experience_ids,
+        );
         if (experiences.length > 0) {
           const newLinks = experiences.map((exp) =>
             this.cityExperienceRepository.create({ city, experience: exp }),
@@ -199,7 +239,7 @@ export class CityService {
    */
   async deleteCity(id: number): Promise<void> {
     try {
-      if (!id) throw new BadRequestException("City ID is required");
+      if (!id) throw new BadRequestException('City ID is required');
 
       const city = await this.cityRepository.findOne({ where: { id } });
       if (!city) throw new NotFoundException(`City with ID ${id} not found`);
