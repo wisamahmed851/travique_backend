@@ -241,6 +241,7 @@ export class UserAuthService {
         id: user.id,
         name: user.name,
         email: user.email,
+        image: user.image,
       }
       const role = roles[0]?.role;
       return {

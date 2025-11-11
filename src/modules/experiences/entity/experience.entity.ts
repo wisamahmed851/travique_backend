@@ -9,6 +9,9 @@ export class Experience {
   @Column({ nullable: false })
   name: string;
 
+  @Column({ nullable: true })
+  image: string;
+
   @Column({ type: 'smallint', default: 1 })
   status: number;
 

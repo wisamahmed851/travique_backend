@@ -26,7 +26,7 @@ export class CityService {
 
     @InjectRepository(Attraction)
     private readonly attractionRepository: Repository<Attraction>,
-  ) {}
+  ) { }
 
   /**
    * Centralized error handler
@@ -80,7 +80,7 @@ export class CityService {
         where: { id: savedCity.id },
         relations: ["cityExperiences", "cityExperiences.experience"],
       })
-      if(!newCity) throw new NotFoundException("Somthing went wrong");
+      if (!newCity) throw new NotFoundException("Somthing went wrong");
       return newCity;
     } catch (error) {
       this.handleError(error);
@@ -115,6 +115,23 @@ export class CityService {
     } catch (error) {
       this.handleError(error);
     }
+  }
+
+  async home() {
+    const popularcities = await this.cityRepository.find({
+      order: { id: 'ASC' },
+      take: 4,
+      select: ['id', 'name', 'description', 'image'],
+    });
+    const experience = await this.experienceRepository.find({
+      order: {
+        id: 'ASC'
+      },
+      take: 4,
+      select : ['id', 'name', 'image',],
+    })
+    if (popularcities.length < 0) throw new NotFoundException("THere is not any cites in the list");
+    return { popular_cities: popularcities, experience: experience };
   }
 
   /**

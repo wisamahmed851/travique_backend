@@ -5,10 +5,12 @@ import { CityController } from "./city.controller";
 import { CityService } from "./city.service";
 import { Experience } from "../experiences/entity/experience.entity";
 import { CityExperience } from "../experiences/entity/city-experience.entity";
+import { CityUserController } from "./city-user.controller";
+import { Attraction } from "../attractions/entity/attraction.entity";
 
 @Module({
-    imports: [TypeOrmModule.forFeature([City, Experience, CityExperience])],
+    imports: [TypeOrmModule.forFeature([City, Experience, CityExperience, Attraction])],
     providers: [CityService],
-    controllers: [CityController],
+    controllers: [CityController, CityUserController],
 })
 export class CityModule { }
