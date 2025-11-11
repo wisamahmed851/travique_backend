@@ -25,6 +25,7 @@ import { ReviewModule } from './modules/review/review.module';
 import { FavoriteModule } from './modules/favorites/favorite.module';
 import { ExperienceModule } from './modules/experiences/experience.module';
 import { ExperienceSeederService } from './modules/experiences/seeder/experience.seeder';
+import { CountryModule } from './modules/country/country.module';
 
 @Module({
   imports: [
@@ -66,6 +67,7 @@ import { ExperienceSeederService } from './modules/experiences/seeder/experience
     ReviewModule,
     FavoriteModule,
     ExperienceModule,
+    CountryModule,
   ],
   controllers: [AppController],
   providers: [AppService],
