@@ -38,6 +38,6 @@ export class CityUpdateDto {
   experience_ids?: number[];
 
   @IsNotEmpty()
-  @IsInt()
+  // @IsInt()
   country_id: number; 
 }

@@ -170,7 +170,8 @@ export class CityService {
         .createQueryBuilder('city')
         .leftJoinAndSelect('city.cityExperiences', 'cityExperience')
         .leftJoinAndSelect('cityExperience.experience', 'experience')
-        .loadRelationCountAndMap('city.attractionCount', 'city.attractions')
+        .leftJoinAndSelect('city.attractions', 'attractions')
+        .leftJoinAndSelect('city.country', 'country')
         .where('city.id = :id', { id })
         .getOne();
 
