@@ -8,9 +8,10 @@ import { CityExperience } from "../experiences/entity/city-experience.entity";
 import { CityUserController } from "./city-user.controller";
 import { Attraction } from "../attractions/entity/attraction.entity";
 import { Country } from "../country/entity/country.entity";
+import { AttractionCategory } from "src/attraction_category/entity/attraction-category.entity";
 
 @Module({
-    imports: [TypeOrmModule.forFeature([City, Experience, CityExperience, Attraction, Country])],
+    imports: [TypeOrmModule.forFeature([City, Experience, CityExperience, Attraction, Country, AttractionCategory])],
     providers: [CityService],
     controllers: [CityController, CityUserController],
 })

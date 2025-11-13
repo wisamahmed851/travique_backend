@@ -11,8 +11,8 @@ export class CreateAttractionDto {
   @IsNotEmpty()
   name: string;
 
-  @IsEnum(AttractionCategory)
-  category: AttractionCategory;
+  @IsNotEmpty()
+  category_id: number;
 
   @IsOptional()
   @IsString()
@@ -49,9 +49,8 @@ export class UpdateAttractionDto  {
   @IsOptional()
   name: string;
 
-  @IsEnum(AttractionCategory)
-  @IsOptional()
-  category: AttractionCategory;
+  @IsNotEmpty()
+  category_id: number;
 
   @IsOptional()
   @IsString()

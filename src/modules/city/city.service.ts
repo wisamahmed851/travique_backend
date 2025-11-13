@@ -12,6 +12,7 @@ import { CityExperience } from '../experiences/entity/city-experience.entity';
 import { Experience } from '../experiences/entity/experience.entity';
 import { Attraction } from '../attractions/entity/attraction.entity';
 import { Country } from '../country/entity/country.entity';
+import { AttractionCategory } from 'src/attraction_category/entity/attraction-category.entity';
 
 @Injectable()
 export class CityService {
@@ -30,7 +31,10 @@ export class CityService {
 
     @InjectRepository(Country)
     private readonly countryRepository: Repository<Country>,
-  ) {}
+
+    @InjectRepository(AttractionCategory)
+    private readonly attractionCategoryRepository: Repository<AttractionCategory>,
+  ) { }
 
   /**
    * Centralized error handler
@@ -162,26 +166,56 @@ export class CityService {
   /**
    * Fetch a single city by ID (with experiences & attraction count)
    */
-  async getCityById(id: number): Promise<City> {
+  async getCityById(id: number): Promise<any> {
     try {
       if (!id) throw new BadRequestException('City ID is required');
 
+      // ✅ 1. Get city + related experiences + top 4 attractions + country
       const city = await this.cityRepository
         .createQueryBuilder('city')
         .leftJoinAndSelect('city.cityExperiences', 'cityExperience')
         .leftJoinAndSelect('cityExperience.experience', 'experience')
-        .leftJoinAndSelect('city.attractions', 'attractions')
         .leftJoinAndSelect('city.country', 'country')
         .where('city.id = :id', { id })
         .getOne();
 
       if (!city) throw new NotFoundException(`City with ID ${id} not found`);
 
-      return city;
+      // ✅ 2. Fetch top 4 attractions (rating-wise)
+      const topAttractions = await this.cityRepository.manager
+        .createQueryBuilder('attractions', 'a')
+        .where('a.city_id = :id', { id })
+        .orderBy('a.average_rating', 'DESC')
+        .limit(4)
+        .getMany();
+
+      // ✅ 3. Fetch all experiences (for dropdowns or city filters)
+      const categories = await this.attractionCategoryRepository.find({
+        where: { status: 1 },
+        order: { id: 'ASC' },
+      });
+
+      // ✅ 4. Fetch random attractions globally (not limited to one city)
+      const randomAttractions = await this.cityRepository.manager
+        .createQueryBuilder('attractions', 'a')
+        .orderBy('RANDOM()') // PostgreSQL random order
+        .limit(6)
+        .getMany();
+
+      // ✅ Attach top 4 attractions to city object
+      (city as any).topAttractions = topAttractions;
+
+      // ✅ 5. Return formatted data
+      return {
+        city,
+        categories,
+        randomAttractions,
+      };
     } catch (error) {
       this.handleError(error);
     }
   }
+
 
   /**
    * Update city details and (optionally) experiences

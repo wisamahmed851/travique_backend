@@ -10,6 +10,7 @@ import { City } from 'src/modules/city/entity/city.entity';
 import { Attraction } from './entity/attraction.entity';
 import { AttractionImages } from './entity/attraction_images.entity';
 import { CreateAttractionDto, UpdateAttractionDto } from './dtos/attraction.dto';
+import { AttractionCategory } from 'src/attraction_category/entity/attraction-category.entity';
 
 @Injectable()
 export class AttractionService {
@@ -22,7 +23,9 @@ export class AttractionService {
 
     @InjectRepository(City)
     private readonly cityRepo: Repository<City>,
-  ) {}
+    @InjectRepository(AttractionCategory)
+    private readonly attractionCategoryRepo: Repository<AttractionCategory>,
+  ) { }
 
   private handleError(error: any) {
     console.error('AttractionService Error:', error);
@@ -40,7 +43,8 @@ export class AttractionService {
     try {
       const city = await this.cityRepo.findOne({ where: { id: dto.city_id } });
       if (!city) throw new NotFoundException('City not found');
-
+      const attractionCategory = await this.attractionCategoryRepo.findOne({ where: { id: dto.category_id } });
+      if (!attractionCategory) throw new NotFoundException("Attraction Category Not Found");
       const attraction = this.attractionRepo.create({
         ...dto,
         main_image,
@@ -102,7 +106,10 @@ export class AttractionService {
     try {
       const attraction = await this.attractionRepo.findOne({ where: { id } });
       if (!attraction) throw new NotFoundException('Attraction not found');
-
+      const city = await this.cityRepo.findOne({ where: { id: dto.city_id } });
+      if (!city) throw new NotFoundException('City not found');
+      const attractionCategory = await this.attractionCategoryRepo.findOne({ where: { id: dto.category_id } });
+      if (!attractionCategory) throw new NotFoundException("Attraction Category Not Found");
       Object.assign(attraction, dto);
       if (main_image) attraction.main_image = main_image;
 

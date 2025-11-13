@@ -27,6 +27,7 @@ import { ExperienceModule } from './modules/experiences/experience.module';
 import { ExperienceSeederService } from './modules/experiences/seeder/experience.seeder';
 import { CountryModule } from './modules/country/country.module';
 import { CountrySeederService } from './modules/country/seeder/country.seeder';
+import { AttractionCategoryModule } from './attraction_category/attraction-category.module';
 
 @Module({
   imports: [
@@ -69,6 +70,7 @@ import { CountrySeederService } from './modules/country/seeder/country.seeder';
     FavoriteModule,
     ExperienceModule,
     CountryModule,
+    AttractionCategoryModule,
   ],
   controllers: [AppController],
   providers: [AppService],
